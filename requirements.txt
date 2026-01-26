@@ -1,0 +1,7 @@
+plotly
+yfinance
+Flask
+bleak
+requests
+paho-mqtt
+psutil

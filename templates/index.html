@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Smart Home Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="background-shape shape-1"></div>
+<div class="background-shape shape-2"></div>
+
+<div class="main-container">
+
+    <header class="glass-header" style="display: flex; justify-content: space-between; align-items: center;">
+
+        <div>
+            <h1 style="margin:0; font-size: 1.5rem;">Smarthome</h1>
+            <small style="opacity: 0.7;">Dashboard Control</small>
+        </div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div id="connection-status"
+                 style="font-size: 0.8rem; background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 10px;">
+                System Ready
+            </div>
+            <div class="terminal-icon" onclick="toggleLogWindow()" title="System Logs">
+                &gt;_
+            </div>
+        </div>
+    </header>
+
+
+    <div id="dashboard-view" class="dashboard-grid">
+        <!----------------------------------------------Weather Widget------------------------------------------------------------------->
+
+        <div id="weatherWidget" class="glass-card clickable" onclick="openWeatherDetail()"
+             style="position: relative; overflow: hidden; min-height: 250px; cursor: pointer; padding: 0;">
+
+            <div id="weatherBg"
+                 style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255, 255, 255, 0.05); z-index:0; transition: background 1.5s ease-in-out;"></div>
+
+            <div class="hover-mask"
+                 style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.1); opacity: 0; z-index: 5; transition: opacity 0.3s ease; pointer-events: none;"></div>
+
+            <div style="position: relative; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 10px 20px;">
+                <h3 id="cityNameDisplay"
+                    style="margin: 0; font-size: 1.6em; color: white; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); letter-spacing: 1px;">
+                    Innsbruck</h3>
+                <span id="searchCityIcon"
+                      style="cursor: pointer; font-size: 1.3em; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3)); transition: transform 0.2s; pointer-events: auto;"
+                      onmouseover="this.style.transform='scale(1.2)'"
+                      onmouseout="this.style.transform='scale(1)'"
+                      onclick="event.stopPropagation(); toggleCityInput()" title="Search City">🔍</span>
+            </div>
+            <div id="cityInputArea" onclick="event.stopPropagation()"
+                 style="display: none; position: absolute; top: 20px; left: 20px; right: 20px; z-index: 30; background: rgba(30,30,30,0.95); padding: 12px; border-radius: 12px; backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.5); pointer-events: auto;">
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="citySearchInput" placeholder="Search City..."
+                           onkeydown="if(event.key === 'Enter') updateWeatherCity()"
+                           style="flex-grow: 1; padding: 10px; border-radius: 6px; border: none; background: #222; color: white; outline: none;">
+                    <button class="btn" style="background: #27ae60; padding: 5px 20px; border-radius: 6px;"
+                            onclick="updateWeatherCity()">OK
+                    </button>
+                </div>
+            </div>
+            <div id="weatherContent"
+                 style="position: relative; z-index: 10; padding: 0 20px 20px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div id="currentTempArea" style="text-align: center;">
+                    <img id="currentWeatherIcon" src=""
+                         style="width: 100px; height: 100px; filter: drop-shadow(0 0 15px rgba(255,255,255,0.3));">
+                    <div id="currentTemp"
+                         style="font-size: 4em; font-weight: 800; color: white; text-shadow: 2px 4px 10px rgba(0,0,0,0.3); margin-top: -10px;">
+                        --°C
+                    </div>
+                </div>
+                <div id="forecastContainer" style="display: none;"></div>
+            </div>
+        </div>
+        <!----------------------------------------------Printer Widget------------------------------------------------------------------->
+        <div id="printer-widget" class="glass-card clickable" onclick="openPrinterControl()">
+            <div class="icon-title" style="justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"
+                             stroke-linejoin="round">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                            <rect x="10" y="14" width="4" height="4" fill="white" stroke="none" rx="1"></rect>
+                        </svg>
+                    </div>
+                    <div style="display: flex; flex-direction: column; justify-content: center;">
+                        <h3 style="margin:0; line-height: 1.2;">Printer</h3>
+                        <span id="p_status" style="font-size: 0.8rem; font-weight: normal; color: #aaa;">Offline</span>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <span id="p_progress" style="font-size: 1.5rem; font-weight:bold;">0</span><span
+                        style="font-size:1rem;">%</span>
+                </div>
+            </div>
+
+            <div class="progress-container-horizontal">
+                <div id="dash-progress-bar-horizontal" class="progress-bar-horizontal-fill"></div>
+            </div>
+        </div>
+        <!----------------------------------------------LED List------------------------------------------------------------------->
+
+        <div id="led-widget" class="glass-card clickable" onclick="openLEDDeviceList()">
+            <div class="icon-title">
+                <div class="card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round"
+                         stroke-linejoin="round">
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        <path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" fill="rgba(255, 215, 0, 0.2)"></path>
+                        <path d="M12 7v1"></path>
+                    </svg>
+                </div>
+                <h3>Light</h3>
+            </div>
+            <p style="opacity: 0.7; margin-top:0;">Manage Devices</p>
+        </div>
+        <!----------------------------------------------Cloud Widget------------------------------------------------------------------->
+        <div id="cloud-widget" class="glass-card clickable" onclick="openCloud()">
+            <div class="icon-title">
+                <div class="card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#00d2ff" stroke-width="2" stroke-linecap="round"
+                         stroke-linejoin="round">
+                        <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
+                    </svg>
+                </div>
+                <h3>Cloud</h3>
+            </div>
+            <p style="opacity: 0.7; margin-top:0;">View Files</p>
+        </div>
+        <!----------------------------------------------BTC Chart Widget------------------------------------------------------------------->
+        <div id="btc-widget" class="glass-card"
+             style="grid-row: span 2; display: flex; flex-direction: column; align-items: normal; padding-bottom: 0;">
+
+            <div class="icon-title"
+                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; width: 100%;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#F7931A" stroke-width="2" stroke-linecap="round"
+                             stroke-linejoin="round">
+                            <path d="M11.767 19.089c4.924.868 6.14-6.025 1.216-6.894m-1.216 6.894L5.86 18.047m5.908 1.042-.347 1.97m1.563-8.864c4.924.869 6.14-6.025 1.215-6.893m-1.215 6.893-3.94-.694m5.155-6.2L8.279 5.307m2.188-.525-.428-1.72"></path>
+                            <path d="M6 12h2"></path>
+                        </svg>
+                    </div>
+                    <h3 style="margin:0;">Bitcoin</h3>
+                </div>
+
+                <div class="button-group" style="gap: 5px;">
+                    <button id="btn-1h" class="glass-btn small" onclick="updateBtcChart('1h', this)"
+                            style="padding: 5px 10px; font-size: 0.8rem; background: rgba(255,255,255,0.2);">1H
+                    </button>
+                    <button class="glass-btn small" onclick="updateBtcChart('1d', this)"
+                            style="padding: 5px 10px; font-size: 0.8rem;">1D
+                    </button>
+                    <button class="glass-btn small" onclick="updateBtcChart('1wk', this)"
+                            style="padding: 5px 10px; font-size: 0.8rem;">1W
+                    </button>
+                </div>
+            </div>
+
+            <div id="btc-chart-container"
+                 style="width: 100%; flex-grow: 1; min-height: 0; position: relative; overflow: hidden; border-radius: 0 0 15px 15px;">
+                <p id="btc-loading-text"
+                   style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0; opacity: 0.5; pointer-events: none;">
+                    Load Data...
+                </p>
+            </div>
+
+            <script>
+                document.addEventListener("DOMContentLoaded", () => {
+                    const btn1h = document.getElementById('btn-1h');
+                    if (btn1h && typeof updateBtcChart === 'function') {
+                        setTimeout(() => updateBtcChart('1h', btn1h), 100);
+                    }
+                });
+            </script>
+        </div>
+        <!----------------------------------------------Room Widget------------------------------------------------------------------->
+        <div id="room-widget" class="glass-card clickable" onclick="openRoomMap()">
+            <div class="icon-title">
+                <div class="card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#00d2ff" stroke-width="2" stroke-linecap="round"
+                         stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="9" y1="3" x2="9" y2="21"></line>
+                        <line x1="9" y1="12" x2="21" y2="12"></line>
+                        <path d="M14 12v3"></path>
+                    </svg>
+                </div>
+                <h3 style="margin:0;">Roomplan</h3>
+            </div>
+            <p style="opacity: 0.7; margin-top:0;">View Appartment</p>
+        </div>
+        <!----------------------------------------------Automations Widget------------------------------------------------------------------->
+        <div id="automation-widget" class="glass-card clickable" onclick="openAutomationPanel()">
+            <div class="icon-title">
+                <div class="card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                    </svg>
+                </div>
+                <h3 style="margin:0;">Automations</h3>
+            </div>
+            <p style="opacity: 0.7; margin-top:0;">Scenes & Actions</p>
+        </div>
+        <!----------------------------------------------Plant Widget Panel------------------------------------------------------------------->
+        <div id="plant-widget" class="glass-card">
+            <div class="icon-title" style="margin-bottom: 10px;">
+                <div class="card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2" stroke-linecap="round"
+                         stroke-linejoin="round">
+                        <path d="M12 22v-9"></path>
+                        <path d="M12 13c-3.5-4-9-3-11 1"></path>
+                        <path d="M12 13c3.5-4 9-3 11 1"></path>
+                        <path d="M12 13c-2-5-4-8-7-9"></path>
+                        <path d="M12 13c2-5 4-8 7-9"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 style="margin:0;">Pflanze</h3>
+                    <small id="plant-status-text" style="opacity:0.7;">Load Data...</small>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
+                <span style="font-size: 0.9rem; opacity: 0.8;">Moisture:</span>
+                <div style="text-align: right;">
+                    <span id="plant-moisture-pct" style="font-size: 1.2rem; font-weight:bold; color: #2ecc71;">--</span>
+                    <span id="plant-moisture-unit" style="font-size:0.9rem;">%</span>
+                </div>
+            </div>
+
+            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-bottom: 15px; overflow: hidden;">
+                <div id="plant-progress-bar"
+                     style="height: 100%; background: #2ecc71; width: 0%; transition: width 0.5s;"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.9rem; opacity: 0.8;">Temperature:</span>
+                <span id="plant-temp-val" style="font-size: 1.2rem; font-weight: bold; color: white;">-- °C</span>
+            </div>
+        </div>
+        <!----------------------------------------------NFC Widget------------------------------------------------------------------->
+
+        <div id="nfc-widget" class="glass-card clickable" onclick="startNFCScan()">
+            <div class="icon-title">
+                <div class="card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M2 8h20M2 16h20M8 2v20M16 2v20"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 style="margin:0;">NFC Scanner</h3>
+                    <small id="nfc-status" style="opacity:0.7;">ready to scan</small>
+                </div>
+            </div>
+            <div id="nfc-result"
+                 style="margin-top: 15px; font-family: monospace; font-size: 1.1rem; color: var(--accent-color); text-align: center; font-weight: bold;">
+                ID: ----
+            </div>
+        </div>
+
+        <!----------------------------------------------System Stats Widget------------------------------------------------------------------->
+
+        <div id="system-health-widget" class="glass-card">
+            <div class="icon-title">
+                <div class="card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2">
+                        <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                        <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                        <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                        <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                    </svg>
+                </div>
+                <h3>System Health</h3>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 0.9rem; opacity: 0.8;">CPU Temp</span>
+                    <span id="sys_temp" style="font-size: 1.2rem; font-weight: bold; font-family: 'Inter', sans-serif;">-- °C</span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 0.9rem; opacity: 0.8;">CPU Load</span>
+                    <span id="sys_cpu" style="font-size: 1.2rem; font-weight: bold; font-family: 'Inter', sans-serif;">--%</span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 0.9rem; opacity: 0.8;">RAM</span>
+                    <span id="sys_ram" style="font-size: 1.2rem; font-weight: bold; font-family: 'Inter', sans-serif;">--%</span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.9rem; opacity: 0.8;">Disk Free</span>
+                    <span id="sys_disk" style="font-size: 1.2rem; font-weight: bold; font-family: 'Inter', sans-serif;">-- GB</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!----------------------------------------------LED Device List  Panel------------------------------------------------------------------->
+
+    <div id="ledDeviceListPanel" class="detail-view glass-card" style="max-width: 600px; margin: 0 auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <button class="backtodashboard-button" style="margin:0;" onclick="finishAndGoBack()">⬅ Back to Dashboard
+            </button>
+
+            <button class="glass-btn danger"
+                    onclick="disconnectAllDevices()"
+                    title="Disconnect all Devices"
+                    style="width: 45px; height: 45px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin: 0;">
+                ✕
+            </button>
+        </div>
+        <div id="light-detail-val" style="font-size: 1.2rem; font-weight: bold;">Zimmer Helligkeit: -- lux</div>
+        <h2>Choose a Device</h2>
+        <div id="led-list-container" class="device-list-container">
+            <p style="text-align: center; opacity: 0.6;">Load Devices...</p>
+        </div>
+        <br>
+        <button class="glass-btn" onclick="scanForNewDevices()">🔄 Scan for Devices</button>
+    </div>
+
+    <div id="controlPanel" class="detail-view glass-card" style="max-width: 600px; margin: 0 auto;">
+        <button class="backtodashboard-button" onclick="finishAndGoBack()">⬅ Back to List</button>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 id="currentDeviceName" style="margin:0;">LED Control</h2>
+        </div>
+        <div style="margin-top: 20px; text-align: center;">
+                <span id="renameIcon" style="cursor: pointer; font-size: 0.8rem; opacity: 0.6;"
+                      onclick="showRenameInput()">✏️ Rename</span>
+            <div class="rename-section" style="display: none; margin-top: 10px;">
+                <input type="text" id="newNameInput" class="glass-btn"
+                       style="width: 60%; cursor: text; display:inline-block;" placeholder="Name">
+                <button class="glass-btn success" style="display:inline-block; width: auto;"
+                        onclick="triggerRename()">
+                    Save
+                </button>
+            </div>
+        </div>
+        <div id="color-wheel"></div>
+        <div class="button-group" style="margin-top: 30px;">
+            <button class="glass-btn success" onclick="setPower('on')">ON</button>
+            <button class="glass-btn danger" onclick="setPower('off')">OFF</button>
+        </div>
+
+
+        <input type="checkbox" id="checkbox-led" style="display:none;">
+    </div>
+
+    <!----------------------------------------------Printer Control Panel------------------------------------------------------------------->
+
+    <div id="printerControlPanel" class="detail-view glass-card" style="max-width: 800px; margin: 0 auto;">
+        <button class="backtodashboard-button" onclick="closePrinterControl()">⬅ Back to Dashboard</button>
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px;">
+
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <div class="card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"
+                         stroke-linejoin="round" width="40" height="40">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-size: 1.8rem;">Bambu Lab A1</h2>
+                    <span id="p_status2" style="color: var(--accent-color); font-weight: bold;">Connected</span>
+                </div>
+            </div>
+
+            <div style="text-align: right; background: rgba(255,255,255,0.08); padding: 12px 18px; border-radius: 12px; border: 1px solid var(--glass-border); min-width: 100px;">
+                <span style="display:block; opacity:0.6; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Remaining</span>
+                <div style="display: flex; align-items: baseline; justify-content: flex-end; gap: 4px;">
+                    <strong style="font-size: 1.6rem; color: var(--accent-color); line-height: 1;"
+                            id="p_remaining">--</strong>
+                    <span style="font-size: 0.9rem; opacity: 0.8;">Min</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 30px 0;">
+            <div class="glass-card" style="text-align: center; padding: 15px;">
+                <span style="display:block; opacity:0.6;">Nozzle</span>
+                <strong style="font-size: 1.5rem;" id="p_nozzle2">0</strong> °C
+            </div>
+            <div class="glass-card" style="text-align: center; padding: 15px;">
+                <span style="display:block; opacity:0.6;">Bed</span>
+                <strong style="font-size: 1.5rem;" id="p_bed2">0</strong> °C
+            </div>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span>Progress</span>
+                <span id="p_progress2">0%</span>
+            </div>
+            <div style="width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden;">
+                <div id="p_progress_bar_detail"
+                     style="height: 100%; background: var(--accent-color); width: 0%;"></div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="glass-btn warning" onclick="sendPrinterCommand('pause')">Pause</button>
+            <button class="glass-btn success" onclick="sendPrinterCommand('resume')">Start</button>
+            <button class="glass-btn danger" onclick="if(confirm('Stop?')) sendPrinterCommand('stop')">Stop</button>
+
+            <button id="btn-printer-light" class="glass-btn" onclick="togglePrinterLight()">Light</button>
+        </div>
+    </div>
+
+    <!----------------------------------------------Cloud Control Panel------------------------------------------------------------------->
+
+    <div id="cloudOverlay" class="detail-view glass-card" style="max-width: 600px; margin: 0 auto;">
+        <button class="backtodashboard-button" onclick="closeCloud()">⬅ Back to Dashboard</button>
+        <h2 style="text-align:center;">Cloud Login</h2>
+        <div id="cloudLoginArea" style="text-align: center; margin-top: 20px;">
+            <div style="display:flex; flex-direction: column; gap: 15px; max-width: 300px; margin: 0 auto;">
+                <input type="text" id="nc_user" class="glass-btn"
+                       style="cursor: text; text-align: left;"
+                       placeholder="Username"
+                       onkeydown="if(event.key === 'Enter') submitCloudLogin()">
+
+                <input type="password" id="nc_pass" class="glass-btn"
+                       style="cursor: text; text-align: left;"
+                       placeholder="Password"
+                       onkeydown="if(event.key === 'Enter') submitCloudLogin()">
+
+                <button class="glass-btn success" onclick="submitCloudLogin()">Login</button>
+            </div>
+        </div>
+        <div id="cloudContentArea" style="display:none; margin-top:20px;">
+            <ul id="fileList" style="list-style: none; padding: 0;"></ul>
+            <button class="glass-btn" style="margin-top:20px;"
+                    onclick="window.open('https://xxx.xxxx', '_blank')">Web Interface öffnen
+            </button>
+        </div>
+    </div>
+    <!----------------------------------------------Weather Control Panel------------------------------------------------------------------->
+
+    <div id="weatherDetailPanel" class="section glass-overlay-panel"
+         style="display:none; width: 95%; max-width: 1400px; margin: 30px auto; position: relative; border-radius: 23px; overflow: hidden; min-height: 90vh; color: white; z-index: 100;">
+
+        <div id="weatherDetailBg"
+             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; transition: background 1s ease;"></div>
+
+        <div style="position: absolute; top: 20px; left: 20px; z-index: 20;">
+            <button class="backtodashboard-button" onclick="closeWeatherDetail()">⬅ Back to Dashboard</button>
+        </div>
+
+        <div style="position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; padding-top: 60px; width: 100%;">
+            <h1 id="detailCityName" style="font-size: 2.5em; margin: 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.8);">
+                --</h1>
+            <div id="detailCurrentTime" style="font-size: 5em; font-weight: bold; margin: 0;">--:--</div>
+            <div id="detailCurrentTemp" style="font-size: 2.5em; opacity: 0.9; margin-bottom: 30px;">--°C</div>
+
+            <div style="width: 90%; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 20px; backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1);">
+                <h3 style="margin: 0 0 15px 10px; opacity: 0.7; font-size: 0.9em; text-transform: uppercase;">Hourly
+                    Forecast</h3>
+                <div id="hourlyTimeline"
+                     style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none;">
+                </div>
+            </div>
+
+            <div style="width: 90%; height: 450px; margin-top: 25px; border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 50px;">
+                <iframe id="weatherMap" src="" width="100%" height="100%" style="border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+    <!----------------------------------------------Automations Control Panel------------------------------------------------------------------->
+    <div id="automationPanel" class="detail-view">
+        <div class="glass-header">
+            <button class="backtodashboard-button" onclick="showDashboard()">← Dashboard</button>
+            <h2 style="margin:0;">Automations</h2>
+        </div>
+
+        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 15px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; cursor: pointer;"
+             onclick="runZimmerxxx()">
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <h3 style="margin:0;">Zimmer xxx</h3>
+                    <span style="cursor: pointer; font-size: 0.8rem; opacity: 0.6; padding: 5px;"
+                          onclick="event.stopPropagation(); toggleDevicePicker()">✏️</span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span class="automation-status-text" id="status-text-xxx">Start</span>
+                    <div class="device-status-dot" id="dot-xxx"></div>
+                </div>
+
+            </div>
+        </div>
+
+        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 15px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="margin:0;">Auto-Licht bei Dunkelheit</h3>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; cursor:pointer;"
+                     onclick="toggleDarknessTrigger()">
+                    <span class="automation-status-text" id="status-text-darkness">Start</span>
+                    <div class="device-status-dot" id="dot-darkness"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 15px; border: 1px solid rgba(255,255,255,0.1); margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="margin:0;">Anwesenheitserkennung</h3>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; cursor:pointer;"
+                     onclick="togglePresenceTrigger()">
+                    <span class="automation-status-text" id="status-text-presence">Inaktiv</span>
+                    <div class="device-status-dot" id="dot-presence"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!----------------------------------------------Room Control Panel------------------------------------------------------------------->
+
+    <div id="device-picker-overlay" class="overlay-panel" style="display: none;">
+        <div class="glass-card picker-content" style="width: 90%; max-width: 400px; padding: 25px;">
+            <h3 style="margin-top:0;">Edit Device List</h3>
+            <p style="font-size: 0.8rem; opacity: 0.7;">Choose LEDs for automation</p>
+            <div id="picker-device-list" style="max-height: 300px; overflow-y: auto; margin: 20px 0;">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="glass-button" onclick="saveAutomationDevices()" style="flex: 1; padding: 10px;">Save
+                </button>
+                <button class="glass-button" onclick="toggleDevicePicker()"
+                        style="flex: 1; background: rgba(255,0,0,0.2); padding: 10px;">Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="roomMapPanel" class="detail-view" style="width: 95%; max-width: 1600px; margin: 0 auto;">
+
+        <div class="glass-header glass-header-column">
+
+            <h2 style="margin:0;">3D Home Map</h2>
+
+            <button class="backtodashboard-button" onclick="showDashboard()">
+                ← Dashboard
+            </button>
+        </div>
+
+        <div class="glass-card" style="padding: 10px; height: 80vh; position: relative; width: 100%;">
+            <model-viewer
+                    id="home-viewer"
+                    src="/static/models/grundriss.glb"
+                    camera-controls
+                    shadow-intensity="3"
+                    exposure="0.6"
+                    style="width: 100%; height: 100%;"
+                    scale="0.001 0.001 0.001"
+                    orientation="-90deg 90deg 180deg"
+                    camera-orbit="-40deg 62deg 50m">
+
+                <div slot="hotspot-christian" class="map-hotspot-container"
+                     data-position="4m 0.2m 3.5m"
+                     data-normal="0m 1m 0m">
+
+                    <div id="led-point-christian" class="led-icon-hotspot"
+                         onclick="connectToMapDevice('BE:67:00:37:82:B9', 'Bett LED', 'christian')">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M9,21c0,0.55 0.45,1 1,1h4c0.55,0 1,-0.45 1,-1v-1H9V21z M12,2C8.14,2 5,5.14 5,9c0,2.38 1.19,4.47 3,5.74V17c0,0.55 0.45,1 1,1h6c0.55,0 1,-0.45 1,-1v-2.26c1.81,-1.27 3,-3.36 3,-5.74C19,5.14 15.86,2 12,2z"/>
+                        </svg>
+                    </div>
+                    <div id="map_controlPanel_christian" class="glass-card map-control-panel" style="display:none;">
+                        <button class="backtodashboard-button" onclick="toggleMapLEDView('point', 'christian')">⬅
+                            Zurück
+                        </button>
+                        <h2 style="text-align:center; margin:10px 0;">Bett LED</h2>
+                        <div id="map_color-wheel_christian"
+                             style="display:flex; justify-content:center; margin:20px 0;"></div>
+                        <div class="button-group">
+                            <button class="glass-btn success" onclick="setPower('on')">ON</button>
+                            <button class="glass-btn danger" onclick="setPower('off')">OFF</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div slot="hotspot-sofa" class="map-hotspot-container"
+                     data-position="5m 0.2m 2m"
+                     data-normal="0m 1m 0m">
+
+                    <div id="led-point-sofa" class="led-icon-hotspot"
+                         onclick="connectToMapDevice('BE:67:00:66:11:9F', 'Sofa', 'sofa')">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M9,21c0,0.55 0.45,1 1,1h4c0.55,0 1,-0.45 1,-1v-1H9V21z M12,2C8.14,2 5,5.14 5,9c0,2.38 1.19,4.47 3,5.74V17c0,0.55 0.45,1 1,1h6c0.55,0 1,-0.45 1,-1v-2.26c1.81,-1.27 3,-3.36 3,-5.74C19,5.14 15.86,2 12,2z"/>
+                        </svg>
+                    </div>
+                    <div id="map_controlPanel_sofa" class="glass-card map-control-panel" style="display:none;">
+                        <button class="backtodashboard-button" onclick="toggleMapLEDView('point', 'sofa')">⬅ Zurück
+                        </button>
+                        <h2 style="text-align:center; margin:10px 0;">Sofa</h2>
+                        <div id="map_color-wheel_sofa"
+                             style="display:flex; justify-content:center; margin:20px 0;"></div>
+                        <div class="button-group">
+                            <button class="glass-btn success" onclick="setPower('on')">ON</button>
+                            <button class="glass-btn danger" onclick="setPower('off')">OFF</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div slot="hotspot-kueche" class="map-hotspot-container"
+                     data-position="-1m 1m -0.49m"
+                     data-normal="0m 1m 0m">
+
+                    <div id="led-point-kueche" class="led-icon-hotspot"
+                         onclick="connectToMapDevice('BE:67:00:31:24:D7', 'Küche', 'kueche')">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M9,21c0,0.55 0.45,1 1,1h4c0.55,0 1,-0.45 1,-1v-1H9V21z M12,2C8.14,2 5,5.14 5,9c0,2.38 1.19,4.47 3,5.74V17c0,0.55 0.45,1 1,1h6c0.55,0 1,-0.45 1,-1v-2.26c1.81,-1.27 3,-3.36 3,-5.74C19,5.14 15.86,2 12,2z"/>
+                        </svg>
+                    </div>
+                    <div id="map_controlPanel_kueche" class="glass-card map-control-panel" style="display:none;">
+                        <button class="backtodashboard-button" onclick="toggleMapLEDView('point', 'kueche')">⬅ Zurück
+                        </button>
+                        <h2 style="text-align:center; margin:10px 0;">Küche</h2>
+                        <div id="map_color-wheel_kueche"
+                             style="display:flex; justify-content:center; margin:20px 0;"></div>
+                        <div class="button-group">
+                            <button class="glass-btn success" onclick="setPower('on')">ON</button>
+                            <button class="glass-btn danger" onclick="setPower('off')">OFF</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div slot="hotspot-printer" class="map-hotspot-container"
+                     data-position="10m 1m 1.6m"
+                     data-normal="0m 1m 0m">
+
+                    <div id="printer-point" class="led-icon-hotspot"
+                         style="--local-color: #00d2ff;"
+                         onclick="toggleMapPrinterView('control')">
+
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-0.55 0.45-1 1-1h14c0.55 0 1 0.45 1 1v4h-2z"/>
+                            <circle cx="18" cy="11.5" r="1"/>
+                        </svg>
+                    </div>
+
+                    <div id="map_printer_panel" class="glass-card map-control-panel"
+                         style="display:none; width: 350px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <div class="card-icon" style="width:30px; height:30px;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 style="margin: 0; font-size: 1.1rem;">Bambu Lab A1</h2>
+                                    <span id="map_p_status_panel"
+                                          style="color: var(--accent-color); font-weight: bold; font-size: 0.8rem;">Connecting...</span>
+                                </div>
+                            </div>
+                            <button onclick="toggleMapPrinterView('point')"
+                                    style="background:none; border:none; color:white; cursor:pointer; font-size:1.2rem;">
+                                ✕
+                            </button>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0;">
+                            <div class="glass-card"
+                                 style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05);">
+                                <span style="display:block; opacity:0.6; font-size:0.7rem;">Nozzle</span>
+                                <strong style="font-size: 1.1rem;" id="map_p_nozzle">--</strong> <small>°C</small>
+                            </div>
+                            <div class="glass-card"
+                                 style="text-align: center; padding: 10px; background: rgba(255,255,255,0.05);">
+                                <span style="display:block; opacity:0.6; font-size:0.7rem;">Bed</span>
+                                <strong style="font-size: 1.1rem;" id="map_p_bed">--</strong> <small>°C</small>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size: 0.8rem;">
+                                <span>Progress</span>
+                                <span id="map_p_progress_panel">0%</span>
+                            </div>
+                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                                <div id="map_progress_bar_panel"
+                                     style="height: 100%; background: var(--accent-color); width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="button-group">
+                            <button class="glass-btn warning" style="font-size: 0.8rem; padding: 8px;"
+                                    onclick="sendPrinterCommand('pause')">Pause
+                            </button>
+                            <button class="glass-btn success" style="font-size: 0.8rem; padding: 8px;"
+                                    onclick="sendPrinterCommand('resume')">Start
+                            </button>
+                            <button class="glass-btn danger" style="font-size: 0.8rem; padding: 8px;"
+                                    onclick="if(confirm('Stop?')) sendPrinterCommand('stop')">Stop
+                            </button>
+                        </div>
+
+                        <button class="glass-btn" style="margin-top:10px; font-size: 0.8rem;"
+                                onclick="openPrinterControl()">Full Details
+                        </button>
+                    </div>
+                </div>
+
+            </model-viewer>
+        </div>
+    </div>
+    <!----------------------------------------------NFC Control Panel------------------------------------------------------------------->
+    <div id="nfcControlPanel" class="detail-view">
+        <div class="glass-header">
+            <button class="backtodashboard-button" onclick="showDashboard()">← Dashboard</button>
+            <h2 style="margin:0;">NFC Log-Database</h2>
+        </div>
+
+        <div class="glass-card" style="max-height: 400px; overflow-y: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                <tr style="border-bottom: 1px solid var(--glass-border); opacity: 0.6;">
+                    <th style="padding: 10px;">Timestamp</th>
+                    <th style="padding: 10px;">UID</th>
+                </tr>
+                </thead>
+                <tbody id="nfc-log-table">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!----------------------------------------------Logging Window------------------------------------------------------------------->
+    <div id="logOverlay" style="display:none;">
+        <div class="log-box">
+            <div class="log-header">
+                <span>System Terminal</span>
+                <span style="cursor:pointer;" onclick="toggleLogWindow()">✖</span>
+            </div>
+            <div id="logContent" class="log-content">
+                Load Data...
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/static/script.js"></script>
+<!----------------------------------------------Sidebar Window------------------------------------------------------------------->
+
+<div id="sidebar-toggle" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
+        <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+</div>
+
+<div id="widget-sidebar" class="glass-card">
+    <h3>Widgets verwalten</h3>
+    <hr style="opacity: 0.2; margin: 15px 0;">
+
+    <div class="sidebar-item">
+        <span>3D-Printer</span>
+        <label class="switch">
+            <input type="checkbox" checked onclick="toggleWidget('printer-widget', this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <div class="sidebar-item">
+        <span>LED Control</span>
+        <label class="switch">
+            <input type="checkbox" checked onclick="toggleWidget('led-widget', this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <div class="sidebar-item">
+        <span>NFC Scan</span>
+        <label class="switch">
+            <input type="checkbox" checked onclick="toggleWidget('nfc-widget', this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="sidebar-item">
+        <span>Weather</span>
+        <label class="switch">
+            <input type="checkbox" checked onclick="toggleWidget('weatherWidget', this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="sidebar-item">
+        <span>Cloud</span>
+        <label class="switch">
+            <input type="checkbox" checked onclick="toggleWidget('cloud-widget', this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="sidebar-item">
+        <span>Room</span>
+        <label class="switch">
+            <input type="checkbox" checked onclick="toggleWidget('room-widget', this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="sidebar-item">
+        <span>Automations</span>
+        <label class="switch">
+            <input type="checkbox" checked onclick="toggleWidget('automation-widget', this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="sidebar-item">
+        <span>Systemstats</span>
+        <label class="switch">
+            <input type="checkbox" checked onclick="toggleWidget('system-health-widget', this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="sidebar-item">
+        <span>Bitcoin Chart</span>
+        <label class="switch">
+            <input type="checkbox" checked onclick="toggleWidget('btc-widget', this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="sidebar-item">
+        <span>Pflanze</span>
+        <label class="switch">
+            <input type="checkbox" checked onclick="toggleWidget('plant-widget', this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+</div>
+</body>
+</html>
