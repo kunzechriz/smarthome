@@ -65,7 +65,7 @@ sudo systemctl start dashboard
 
 ## Bedienung des User Interface
 
-![Dashboard Übersicht](Screenshot from 2026-02-18 10-08-25.png)
+![Dashboard Übersicht](<Screenshot from 2026-02-18 10-08-25.png>)
 
 * **Dashboard**: Die Startseite bietet Widgets für Wetter, Bitcoin-Kurs, Systemstatus (CPU/Temp) und Schnellzugriff auf Lichtszenen.
 * **Geräte-Liste**: Scannt und verbindet sich via Bluetooth Low Energy (BLE) mit umliegenden LED-Controllern.
